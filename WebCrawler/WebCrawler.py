@@ -57,13 +57,14 @@ class WebCrawler:
 
     def is_allowed(self, url):
         disallowed = self.get_disallowed_sites(url, 'GingerWhiskeyCrawler')
-
+        urlpath = Helper.get_path(url)
         for path in disallowed:
-            if fnmatch(path, Helper.get_path(url)):
-                print('true')
+            if fnmatch(urlpath, path):
+                result = False
                 break
             else:
-                print('false')
+                result = True
+        return result
 
         
 
