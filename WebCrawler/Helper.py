@@ -23,6 +23,7 @@ class Helper:
 
         return ''.join(tempCharList)
 
+    @staticmethod
     def get_path(url):
         # Strip protocol:
         url = url.split('//')[-1]
