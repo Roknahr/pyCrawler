@@ -24,7 +24,12 @@ class Helper:
         return ''.join(tempCharList)
 
     def get_path(url):
-        path = '/' + '/'.join(url.split('/')[-1:])
+        # Strip protocol:
+        url = url.split('//')[-1]
+
+        # Get the path
+        path = '/' + '/'.join(url.split('/')[1:])
         if url[-1:] == '/' and path[-1:] != '/':
             path += '/'
+
         return path
