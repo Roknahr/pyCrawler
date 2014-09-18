@@ -69,6 +69,8 @@ class WebCrawler:
         urlpath = Helper.get_path(url)
         result = True
         for path in disallowed:
+            if path[-1] == '/':
+                path += '*'
             if fnmatch(urlpath, path):
                 result = False
                 break
