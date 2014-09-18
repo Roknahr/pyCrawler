@@ -34,7 +34,7 @@ class Frontier:
         url = next[0].get()
 
         domain = Helper.get_domain(url)
-        print(str(next[1]+2 - time()))
+        #print(str(next[1]+2 - time()))
         if time() < next[1]+2:
             sleep(next[1]+2 - time())
 

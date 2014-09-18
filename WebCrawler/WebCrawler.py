@@ -28,7 +28,7 @@ class WebCrawler:
         db.commit()
         db.close()
 
-        #self.frontier.put(self.normalize_url("/questions/2023893/python-3-get-http-page", "stackoverflow.com"))
+        self.frontier.put(self.normalize_url("/", "reddit.com"))
 
         for url in self.all_urls:
             self.frontier.put(url)
@@ -67,12 +67,12 @@ class WebCrawler:
         """ Returns ``True`` if allowed (not in robots.txt) - else returns ``False``. """
         disallowed = self.get_disallowed_sites(url, 'GingerWhiskeyCrawler')
         urlpath = Helper.get_path(url)
+        result = True
         for path in disallowed:
             if fnmatch(urlpath, path):
                 result = False
                 break
-            else:
-                result = True
+
         return result
 
     def get_disallowed_sites(self, url, myAgent):
@@ -83,7 +83,6 @@ class WebCrawler:
 
         try:
             robot = request.urlopen('http://' + domain + '/robots.txt')
-            print(1.5)
         except:
             return []
 
