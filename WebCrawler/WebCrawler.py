@@ -7,8 +7,8 @@ from fnmatch import fnmatch
 from Helper import Helper
 from Frontier import Frontier
 
-class WebCrawler:
 
+class WebCrawler:
     frontier = Frontier()
     all_urls = []
 
@@ -34,7 +34,6 @@ class WebCrawler:
             self.frontier.put(url)
         self.frontier.fill_back_queue()
 
-
     def crawl(self):
         dblength = 0
         dbupdate = 0
@@ -52,7 +51,7 @@ class WebCrawler:
             for url in tempList:
                 if self.is_allowed(url):
                     self.frontier.put(url)
-            
+
             if dbupdate == 0:
                 db = sqlite3.connect("data/pages.db")
                 cursor = db.cursor()
@@ -96,12 +95,12 @@ class WebCrawler:
 
         for line in robot:
             l = str(line).replace("\\n", "").replace("\\r", "")[:-1]
-            if reAgent.findall(l): 
+            if reAgent.findall(l):
                 agent = reAgent.findall(l)[0]
                 disallowed[agent] = []
-            if reDis.findall(l): 
+            if reDis.findall(l):
                 disallowed[agent].append(reDis.findall(l)[0])
-            
+
         result = []
         if myAgent in disallowed:
             for link in disallowed[myAgent]:
@@ -117,8 +116,7 @@ class WebCrawler:
         new_url = self.expand_url(url, root_domain)
         new_url = self.set_case(new_url)
         return new_url
- 
- 
+
     def expand_url(self, url, root_domain):
         root_domain = 'http://' + root_domain
         url_new = url
@@ -131,7 +129,7 @@ class WebCrawler:
         elif len(url) <= 1:
             url_new = root_domain + '/'
 
-        return url_new    
+        return url_new
 
     def process_url(self, url):
         try:
@@ -163,35 +161,34 @@ class WebCrawler:
         if self.frontier.frontQueue.qsize() < 100:
             for link in linkMatches:
                 tempFrontier.add(self.normalize_url(link, Helper.get_domain(url)))
-        
-        #tempFrontier = tempFrontier - set(self.get_disallowed_sites(url, 'GingerWhiskeyCrawler'))
+
+        # tempFrontier = tempFrontier - set(self.get_disallowed_sites(url, 'GingerWhiskeyCrawler'))
 
         return tempFrontier
 
- 
     def set_case(self, url):
         """ Fix case of protocol and domain."""
         i = 0
         tempCharList = []
-            
+
         # set protocol and host to lower case
-        while(i < len(url)):
-            #print(str(len(url)))
+        while i < len(url):
+            # print(str(len(url)))
             tempCharList.append(url[i].lower())
 
             if i > 0 and url[i] == '/' and not (url[i - 1] == ':' or url[i - 1] == '/'):
                 i += 1
                 break
-            
+
             i += 1
-        
+
         # the -2 is to avoid an index out of bound exception. The code continues from after the domain
-        while(i < len(url)):
+        while i < len(url):
             tempCharList.append(url[i])
 
-            if url[i] == '%' and i < len(url)-2:
-                tempCharList.append(url[i+1].upper())
-                tempCharList.append(url[i+2].upper())
+            if url[i] == '%' and i < len(url) - 2:
+                tempCharList.append(url[i + 1].upper())
+                tempCharList.append(url[i + 2].upper())
                 i += 2
 
             i += 1
@@ -205,4 +202,3 @@ class WebCrawler:
         tempUrl.replace("%5F", "_")
 
         return tempUrl
-        
