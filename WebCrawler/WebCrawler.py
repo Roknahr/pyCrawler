@@ -35,27 +35,35 @@ class WebCrawler:
 
     def crawl(self):
         dblength = 0
+        dbupdate = 0
 
         while dblength <= 100:
+
             url = self.frontier.get()
             print(url)
             tempUrls = self.process_url(url)
 
-            #For simplicity: We do not want to crawl pages we already crawled in this session.
+            # For simplicity: We do not want to crawl pages we already crawled in this session.
             tempList = list(tempUrls - set(self.all_urls))
+            self.all_urls += tempList
 
             for url in tempList:
-                self.frontier.put(url)
+                if self.is_allowed(url):
+                    self.frontier.put(url)
+            
+            if dbupdate == 0:
+                db = sqlite3.connect("data/pages.db")
+                cursor = db.cursor()
+                cursor.execute("""SELECT url FROM pages""")
+                dblength = len(cursor.fetchall())
+                print(dblength)
+                db.close()
 
-            db = sqlite3.connect("data/pages.db")
-            cursor = db.cursor()
-            cursor.execute("""SELECT url FROM pages""")
-            dblength = len(cursor.fetchall())
-            print(dblength)
-            db.close()
+            dbupdate = (dbupdate + 1) % 10
 
 
     def is_allowed(self, url):
+        """ Returns ``True`` if allowed (not in robots.txt) - else returns ``False``. """
         disallowed = self.get_disallowed_sites(url, 'GingerWhiskeyCrawler')
         urlpath = Helper.get_path(url)
         for path in disallowed:
