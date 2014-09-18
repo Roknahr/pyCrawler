@@ -2,6 +2,7 @@ from Helper import Helper
 from time import time, sleep
 from queue import Queue
 
+
 class Frontier:
     
     numBackQueues = 10

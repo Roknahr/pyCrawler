@@ -16,5 +16,8 @@ if(wc.is_allowed("http://stackoverflow.com/test/ivc/test")):
     print('true')
 else:
     print('false')
-
+if(wc.is_allowed("http://stackoverflow.com/test/ivc/test")):
+    print('true')
+else:
+    print('false')
 print(2)

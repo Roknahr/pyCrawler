@@ -12,6 +12,8 @@ class WebCrawler:
     frontier = Frontier()
     all_urls = []
 
+    robots = {}
+
     def __init__(self):
         if not os.path.exists("data"):
             os.makedirs("data")
@@ -54,7 +56,6 @@ class WebCrawler:
             print(dblength)
             db.close()
 
-
     def is_allowed(self, url):
         disallowed = self.get_disallowed_sites(url, 'GingerWhiskeyCrawler')
         urlpath = Helper.get_path(url)
@@ -66,13 +67,15 @@ class WebCrawler:
                 result = True
         return result
 
-        
-
     def get_disallowed_sites(self, url, myAgent):
         domain = Helper.get_domain(url)
-        
+
+        if domain in self.robots.keys():
+            return self.robots[domain]
+
         try:
-            robots = request.urlopen('http://' + domain + '/robots.txt')
+            robot = request.urlopen('http://' + domain + '/robots.txt')
+            print(1.5)
         except:
             return []
 
@@ -82,8 +85,8 @@ class WebCrawler:
         agent = None
         disallowed = {}
 
-        for line in robots:
-            l = str(line).replace("\\n","").replace("\\r","")[:-1]
+        for line in robot:
+            l = str(line).replace("\\n", "").replace("\\r", "")[:-1]
             if reAgent.findall(l): 
                 agent = reAgent.findall(l)[0]
                 disallowed[agent] = []
@@ -93,10 +96,12 @@ class WebCrawler:
         result = []
         if myAgent in disallowed:
             for link in disallowed[myAgent]:
-                result.append(link) #self.normalize_url(link, domain))
+                result.append(link)  # self.normalize_url(link, domain))
         if '*' in disallowed:
             for link in disallowed['*']:
-                result.append(link)#self.normalize_url(link, domain))
+                result.append(link)  # self.normalize_url(link, domain))
+
+        self.robots[domain] = result
         return result
 
     def normalize_url(self, url, root_domain):
