@@ -7,12 +7,19 @@ from fnmatch import fnmatch
 from Helper import Helper
 from Frontier import Frontier
 
-
 class WebCrawler:
+    # Set debug on or off - print debug msg with Helper.debug(str) if on.
+    Helper.set_debug('off')
+
+    
     frontier = Frontier()
     all_urls = []
+    been_crawled = []
 
+    tempDBCache = {}
     robots = {}
+
+
 
     def __init__(self):
         if not os.path.exists("data"):
@@ -25,42 +32,66 @@ class WebCrawler:
         """)
         cursor.execute("""SELECT url FROM pages""")
         self.all_urls = [''.join(item) for item in cursor.fetchall()]
+
+        # Clean db
+        cursor.execute("""DELETE FROM pages WHERE html = ''""")
         db.commit()
         db.close()
 
         self.frontier.put(self.normalize_url("/", "reddit.com"))
 
         for url in self.all_urls:
-            self.frontier.put(url)
+            if self.is_allowed(url):
+                self.frontier.put(url)
+        
         self.frontier.fill_back_queue()
 
+        
+
+    def syncdb(self):
+        db = sqlite3.connect("data/pages.db")
+        cursor = db.cursor()
+        cursor.execute("""SELECT url FROM pages""")
+        all_urls = [''.join(item) for item in cursor.fetchall()]
+        dbsize = len(all_urls)
+
+        for url in self.tempDBCache:
+            if url in all_urls:
+                cursor.execute("""
+                    UPDATE pages SET html = ? WHERE url = ? """, (self.tempDBCache[url], url))
+            else:
+                cursor.execute("""
+                    INSERT INTO pages(url, html) VALUES (?,?)""", (url, self.tempDBCache[url]))
+                dbsize += 1
+        db.commit()
+        db.close()
+
+
+        return dbsize
+
+
     def crawl(self):
-        dblength = 0
+        dbsize = 0
         dbupdate = 0
 
-        while dblength <= 100:
-
+        while dbsize <= 1000:
             url = self.frontier.get()
             print(url)
             tempUrls = self.process_url(url)
 
             # For simplicity: We do not want to crawl pages we already crawled in this session.
-            tempList = list(tempUrls - set(self.all_urls))
-            self.all_urls += tempList
+            tempList = list(tempUrls - set(self.been_crawled))
+            self.been_crawled.append(url)
 
             for url in tempList:
                 if self.is_allowed(url):
                     self.frontier.put(url)
-
+            
             if dbupdate == 0:
-                db = sqlite3.connect("data/pages.db")
-                cursor = db.cursor()
-                cursor.execute("""SELECT url FROM pages""")
-                dblength = len(cursor.fetchall())
-                print(dblength)
-                db.close()
+                dbsize = self.syncdb()
+                print(dbsize)
 
-            dbupdate = (dbupdate + 1) % 10
+            dbupdate = (dbupdate + 1) % 20
 
     def is_allowed(self, url):
         """ Returns ``True`` if allowed (not in robots.txt) - else returns ``False``. """
@@ -77,6 +108,8 @@ class WebCrawler:
         return result
 
     def get_disallowed_sites(self, url, myAgent):
+        Helper.debug("Get disallowed sites 1")
+
         domain = Helper.get_domain(url)
 
         if domain in self.robots.keys():
@@ -84,6 +117,7 @@ class WebCrawler:
 
         try:
             robot = request.urlopen('http://' + domain + '/robots.txt')
+            Helper.debug('    Fetching robots.txt: '+domain)
         except:
             return []
 
@@ -92,15 +126,15 @@ class WebCrawler:
 
         agent = None
         disallowed = {}
-
+        Helper.debug("Get disallowed sites 2")
         for line in robot:
             l = str(line).replace("\\n", "").replace("\\r", "")[:-1]
-            if reAgent.findall(l):
+            if reAgent.findall(l): 
                 agent = reAgent.findall(l)[0]
                 disallowed[agent] = []
-            if reDis.findall(l):
+            if reDis.findall(l): 
                 disallowed[agent].append(reDis.findall(l)[0])
-
+        Helper.debug("Get disallowed sites 3")    
         result = []
         if myAgent in disallowed:
             for link in disallowed[myAgent]:
@@ -108,7 +142,7 @@ class WebCrawler:
         if '*' in disallowed:
             for link in disallowed['*']:
                 result.append(link)  # self.normalize_url(link, domain))
-
+        Helper.debug("Get disallowed sites 4")
         self.robots[domain] = result
         return result
 
@@ -116,7 +150,8 @@ class WebCrawler:
         new_url = self.expand_url(url, root_domain)
         new_url = self.set_case(new_url)
         return new_url
-
+ 
+ 
     def expand_url(self, url, root_domain):
         root_domain = 'http://' + root_domain
         url_new = url
@@ -129,26 +164,35 @@ class WebCrawler:
         elif len(url) <= 1:
             url_new = root_domain + '/'
 
-        return url_new
+        return url_new    
+
+    def db_cache(self, url, source):
+        self.tempDBCache[url] = source
 
     def process_url(self, url):
+        Helper.debug("process start")
         try:
             source = request.urlopen(url).read()
         except:
             return set()
-        db = sqlite3.connect("data/pages.db")
-        cursor = db.cursor()
-        cursor.execute("""SELECT url FROM pages""")
-        all_urls = [''.join(item) for item in cursor.fetchall()]
-        if url in all_urls:
-            cursor.execute("""
-                UPDATE pages SET html = ? WHERE url = ? """, (source, url))
-        else:
-            cursor.execute("""
-                INSERT INTO pages(url, html) VALUES (?,?)""", (url, source))
-        db.commit()
-        db.close()
+        Helper.debug("process 1:db")
+        
+        self.db_cache(url, source)
 
+        #db = sqlite3.connect("data/pages.db")
+        #cursor = db.cursor()
+        #cursor.execute("""SELECT url FROM pages""")
+        #all_urls = [''.join(item) for item in cursor.fetchall()]
+        #if url in all_urls:
+        #    cursor.execute("""
+        #        UPDATE pages SET html = ? WHERE url = ? """, (source, url))
+        #else:
+        #    cursor.execute("""
+        #        INSERT INTO pages(url, html) VALUES (?,?)""", (url, source))
+        #db.commit()
+        #db.close()
+        
+        Helper.debug("process 2:re")
         # Regex for finding links
         rgx = re.compile('a href="(\/\S+|[\/aA-zZ0-9]\S+\.\S+)"')
 
@@ -157,38 +201,43 @@ class WebCrawler:
         tempFrontier = set()
 
         tempFrontier.add(url)
-
-        if self.frontier.frontQueue.qsize() < 100:
+        Helper.debug("process 3:add links")
+        if self.frontier.frontQueue.qsize() < 10:
             for link in linkMatches:
-                tempFrontier.add(self.normalize_url(link, Helper.get_domain(url)))
-
-        # tempFrontier = tempFrontier - set(self.get_disallowed_sites(url, 'GingerWhiskeyCrawler'))
-
+                if ('https://' in link or 'http://' in link or link[0] == '/') \
+                    and 'ftp.' not in link \
+                    and'ftp://' not in link \
+                    and 'mailto:' not in link:
+                    tempFrontier.add(self.normalize_url(link, Helper.get_domain(url)))
+        
+        #tempFrontier = tempFrontier - set(self.get_disallowed_sites(url, 'GingerWhiskeyCrawler'))
+        Helper.debug("process end")
         return tempFrontier
 
+ 
     def set_case(self, url):
         """ Fix case of protocol and domain."""
         i = 0
         tempCharList = []
-
+            
         # set protocol and host to lower case
-        while i < len(url):
-            # print(str(len(url)))
+        while(i < len(url)):
+            #print(str(len(url)))
             tempCharList.append(url[i].lower())
 
             if i > 0 and url[i] == '/' and not (url[i - 1] == ':' or url[i - 1] == '/'):
                 i += 1
                 break
-
+            
             i += 1
-
+        
         # the -2 is to avoid an index out of bound exception. The code continues from after the domain
-        while i < len(url):
+        while(i < len(url)):
             tempCharList.append(url[i])
 
-            if url[i] == '%' and i < len(url) - 2:
-                tempCharList.append(url[i + 1].upper())
-                tempCharList.append(url[i + 2].upper())
+            if url[i] == '%' and i < len(url)-2:
+                tempCharList.append(url[i+1].upper())
+                tempCharList.append(url[i+2].upper())
                 i += 2
 
             i += 1
@@ -202,3 +251,4 @@ class WebCrawler:
         tempUrl.replace("%5F", "_")
 
         return tempUrl
+        

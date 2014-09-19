@@ -1,4 +1,5 @@
 class Helper:
+    _debug = False
 
     @staticmethod
     def get_domain(url):
@@ -34,3 +35,17 @@ class Helper:
             path += '/'
 
         return path
+    @staticmethod
+    def set_debug(mode):
+
+        if mode.lower() == 'off':
+            Helper._debug = False
+        elif mode.lower() == 'on':
+            Helper._debug = True
+        else:
+            print("You didn't change debug mode...")
+
+    @staticmethod
+    def debug(string):
+        if Helper._debug == True:
+            print(    'DEBUG: ' + string)
