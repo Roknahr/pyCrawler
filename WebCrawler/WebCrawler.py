@@ -141,7 +141,7 @@ class WebCrawler:
         reAgent = re.compile("User-[aA]gent: *(\S+) *$")
         reDis = re.compile("Disallow: *(/\S*) *$")
 
-        agent = "None"
+        agent = None
         disallowed = {}
         Helper.debug("Get disallowed sites 2")
         for line in robot:
@@ -150,7 +150,8 @@ class WebCrawler:
                 agent = reAgent.findall(l)[0]
                 disallowed[agent] = []
             if reDis.findall(l): 
-                disallowed[agent].append(reDis.findall(l)[0])
+                if agent in disallowed:
+                    disallowed[agent].append(reDis.findall(l)[0])
         Helper.debug("Get disallowed sites 3")    
         result = []
         if myAgent in disallowed:
