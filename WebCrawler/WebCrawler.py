@@ -25,6 +25,8 @@ class WebCrawler:
         if not os.path.exists("data"):
             os.makedirs("data")
 
+
+
         db = sqlite3.connect("data/pages.db")
         cursor = db.cursor()
         cursor.execute("""
@@ -38,7 +40,10 @@ class WebCrawler:
         db.commit()
         db.close()
 
-        self.frontier.put(self.normalize_url("/", "reddit.com"))
+        # Seed
+        if len(self.all_urls) == 0:
+            self.frontier.put(self.normalize_url("/", "reddit.com"))
+            self.frontier.put(self.normalize_url("/", "eb.dk"))
 
         for url in self.all_urls:
             if self.is_allowed(url):
@@ -46,7 +51,17 @@ class WebCrawler:
         
         self.frontier.fill_back_queue()
 
-        
+    def clean_db(self):
+        db = sqlite3.connect("data/pages.db")
+        cursor = db.cursor()
+        cursor.execute("""DELETE FROM pages WHERE html = ''""")
+        cursor.execute("""SELECT url FROM pages""")
+        entries = len(cursor.fetchall())
+        db.commit()
+        db.close()  
+
+        if entries < 1000:
+            self.crawl()
 
     def syncdb(self):
         db = sqlite3.connect("data/pages.db")
@@ -91,7 +106,9 @@ class WebCrawler:
                 dbsize = self.syncdb()
                 print(dbsize)
 
-            dbupdate = (dbupdate + 1) % 20
+            dbupdate = (dbupdate + 1) % 210
+
+        self.clean_db()
 
     def is_allowed(self, url):
         """ Returns ``True`` if allowed (not in robots.txt) - else returns ``False``. """
@@ -124,7 +141,7 @@ class WebCrawler:
         reAgent = re.compile("User-[aA]gent: *(\S+) *$")
         reDis = re.compile("Disallow: *(/\S*) *$")
 
-        agent = None
+        agent = "None"
         disallowed = {}
         Helper.debug("Get disallowed sites 2")
         for line in robot:
@@ -167,7 +184,8 @@ class WebCrawler:
         return url_new    
 
     def db_cache(self, url, source):
-        self.tempDBCache[url] = source
+        if source:
+            self.tempDBCache[url] = source
 
     def process_url(self, url):
         Helper.debug("process start")

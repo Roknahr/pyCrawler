@@ -26,7 +26,7 @@ class Frontier:
                 self.backQueue[domain][0].put(url)
 
     def get(self):
-        if len(self.backQueue) < 10:
+        if len(self.backQueue) < (self.numBackQueues*0.8):
             self.fill_back_queue()
 
         next = sorted(self.backQueue.values(), key=lambda x: x[1])[0]
