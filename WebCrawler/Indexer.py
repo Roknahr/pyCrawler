@@ -1,4 +1,3 @@
-from urllib import request
 from lib.dehtml import dehtml
 from Term import Term
 import sqlite3
@@ -34,7 +33,7 @@ stop_words = set("""a about above after again against all am an and any are aren
 class Indexer():
     dictionary = dict()
 
-    def __init__(self):
+    def index(self):
         db = sqlite3.connect("data/pages.db")
         cursor = db.cursor()
         cursor.execute("""DROP TABLE IF EXISTS freqTable""")
@@ -52,14 +51,14 @@ class Indexer():
             if int(i) % 10 == 0:
                 print(i)
 
-            self.parse_html(str(text), i)
+            self.add_to_index(self.parse_html(str(text)), i)
 
         for key in self.dictionary.keys():
             cursor.execute("""
                 INSERT INTO freqTable(term, freq) VALUES (?,?)
                 """, (key, self.dictionary[key].freq))
             term_id = cursor.lastrowid
-            if int(term_id) % 100 == 0:
+            if int(term_id) % 1000 == 0:
                 print(term_id)
             tmp = []
             for page_id in self.dictionary[key].getPostList():
@@ -71,17 +70,22 @@ class Indexer():
         db.commit()
         db.close()
 
-    def parse_html(self, html, doc_id):
+    def parse_html(self, html):
         words = dehtml(html)
 
         s = Stemmer("danish")
 
+        result = []
         for w in words.split():
             word = w.lower()
             if word in stop_words or len(word) < 2 or word.count('\\'):
                 continue
 
-            sw = s.stemWord(word)
+            result.append(s.stemWord(word))
+        return result
+
+    def add_to_index(self, words, doc_id):
+        for sw in words:
             if sw in self.dictionary.keys():
                 self.dictionary[sw].freq += 1
                 self.dictionary[sw].addToPostList(doc_id)
@@ -91,14 +95,16 @@ class Indexer():
                 self.dictionary[sw].addToPostList(doc_id)
                 self.dictionary[sw].name = sw
 
+
 if __name__ == "__main__":
     ind = Indexer()
+    ind.index()
     url = "http://aau.dk/"
     print("testing...")
 
     res = sorted(ind.dictionary.values(), key=lambda x: x.freq)
 
-    for r in res[-50:]:
+    for r in res[-20:]:
         print(r.freq, r.name)
 
     print('total terms: ' + str(len(res)))
