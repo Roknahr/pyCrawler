@@ -1,6 +1,5 @@
 class Term:
-    freq = 0
-    plist = list()
+    plist = set()
 
     def getFreq(self):
         return self.freq
@@ -12,8 +11,8 @@ class Term:
         return self.plist
 
     def addToPostList(self, term):
-        self.plist.append(term)  
+        self.plist.add(term)
 
     def __init__(self):
-        pass
+        self.freq = 1
 
