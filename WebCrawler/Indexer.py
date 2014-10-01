@@ -47,11 +47,11 @@ class Indexer():
 
         cursor.execute("""SELECT id, html FROM pages""")
         id_html = cursor.fetchall()
-        for i, text in id_html:
+        for i, html in id_html:
             if int(i) % 10 == 0:
                 print(i)
 
-            self.add_to_index(self.parse_html(str(text)), i)
+            self.add_to_index(self.parse_html(str(html)), i)
 
         for key in self.dictionary.keys():
             cursor.execute("""
@@ -70,7 +70,8 @@ class Indexer():
         db.commit()
         db.close()
 
-    def parse_html(self, html):
+    @staticmethod
+    def parse_html(html):
         words = dehtml(html)
 
         s = Stemmer("danish")
@@ -88,12 +89,11 @@ class Indexer():
         for sw in words:
             if sw in self.dictionary.keys():
                 self.dictionary[sw].freq += 1
-                self.dictionary[sw].addToPostList(doc_id)
             else:
                 self.dictionary[sw] = Term()
                 self.dictionary[sw].freq = 1
-                self.dictionary[sw].addToPostList(doc_id)
                 self.dictionary[sw].name = sw
+            self.dictionary[sw].addToPostList(doc_id)
 
 
 if __name__ == "__main__":
