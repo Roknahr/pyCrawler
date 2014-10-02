@@ -60,12 +60,9 @@ class Indexer():
             term_id = cursor.lastrowid
             if int(term_id) % 1000 == 0:
                 print(term_id)
-            tmp = []
             for page_id in self.dictionary[key].getPostList():
-                tmp.append(str(page_id)+','+str(term_id))
-
-            cursor.execute("""
-                INSERT INTO indexTable(pageId, termId) VALUES (""" + '),('.join(tmp) + ')')
+                cursor.execute("""
+                    INSERT INTO indexTable(pageId, termId) VALUES (?,?)""", (page_id, term_id))
 
         db.commit()
         db.close()
