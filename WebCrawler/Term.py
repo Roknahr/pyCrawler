@@ -1,6 +1,4 @@
 class Term:
-    plist = set()
-
     def getFreq(self):
         return self.freq
 
@@ -15,4 +13,4 @@ class Term:
 
     def __init__(self):
         self.freq = 1
-
+        self.plist = set()

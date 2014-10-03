@@ -2,8 +2,8 @@ from lib.dehtml import dehtml
 from Term import Term
 import sqlite3
 
-
 from Stemmer import Stemmer
+
 stop_words = set("""a about above after again against all am an and any are aren't as at
                 be because been before being below between both but by can't cannot could
                 couldn't did didn't do does doesn't doing don't down during each few for
@@ -44,14 +44,22 @@ class Indexer():
         cursor.execute("""
             CREATE TABLE indexTable (id INTEGER PRIMARY KEY, pageId INTEGER, termId INTEGER)
             """)
+        cursor.execute("""DROP TABLE IF EXISTS htmlParsed""")
+        cursor.execute("""
+            CREATE TABLE htmlParsed (id INTEGER PRIMARY KEY, pageId INTEGER, html TEXT)
+            """)
 
         cursor.execute("""SELECT id, html FROM pages""")
         id_html = cursor.fetchall()
+
         for i, html in id_html:
             if int(i) % 10 == 0:
                 print(i)
 
-            self.add_to_index(self.parse_html(str(html)), i)
+            parsed_html = self.parse_html(str(html))
+            self.add_to_index(parsed_html, i)
+            cursor.execute("""INSERT INTO htmlParsed(pageId, html) VALUES (?, ?)""",
+                           (i, ' '.join(parsed_html)))
 
         for key in self.dictionary.keys():
             cursor.execute("""
@@ -63,6 +71,7 @@ class Indexer():
             for page_id in self.dictionary[key].getPostList():
                 cursor.execute("""
                     INSERT INTO indexTable(pageId, termId) VALUES (?,?)""", (page_id, term_id))
+
 
         db.commit()
         db.close()
